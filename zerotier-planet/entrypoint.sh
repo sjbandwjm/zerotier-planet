@@ -4,7 +4,8 @@ set -x
 
 function start() {
     echo "start zerotier"
-    cd /var/lib/zerotier-one && ./zerotier-one -p$(cat /app/config/zerotier-one.port) -d || exit 1
+    echo `ls /var/lib/zerotier-one`
+    cd /var/lib/zerotier-one && zerotier-one -p$(cat /app/config/zerotier-one.port) || exit 1
 }
 
 function check_zerotier() {

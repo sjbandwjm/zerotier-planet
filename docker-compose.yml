@@ -5,18 +5,36 @@ services:
     container_name: ztncui
     image: keynetworks/ztncui
     restart: always
+    network_mode: "host"
     volumes:
-      - ~/ztncui/ztncui:/opt/key-networks/ztncui/etc
-      - ~/ztncui/zt1:/var/lib/zerotier-one
+      - ~/zerotier-one-custom/ztncui/ztncui-web:/opt/key-networks/ztncui/etc
+      - ~/zerotier-one-custom/ztncui/zt1:/var/lib/zerotier-one
     environment:
       - NODE_ENV=production
       - HTTPS_PORT=3443
       - HTTP_ALL_INTERFACES=yes
       - ZTNCUI_PASSWD=test
-      - MYADDR=0.0.0.0
+      - MYADDR=[your ip address]
+    # ports:
+    #   - 3443:3443
+    #   - 3180:3180
+    #   - 9993:9993
+    #   - 9993:9993/udp
+
+  myztplanet:
+    container_name: ztplanet
+    image: myzt1planet:v1.0
+    restart: always
+    volumes:
+      - ~/zerotier-one-custom/planet/dist:/app/dist
+      - ~/zerotier-one-custom/planet/zt1:/var/lib/zerotier-one
+      - ~/zerotier-one-custom/planet/config:/app/config
+    environment:
+      - IP_ADDR4=[your ip addrress]
+      # - IP_ADDR6=[IPV6IP ADDRESS]
+      - ZT_PORT=9994
     ports:
-      - '3443:3443'
-      - '3180:3180'
-  # zerotier_planet:
-
-
+      - 9994:9994
+      - 9994:9994/udp
+      # - 3443:3443
+      # - 3000:3000

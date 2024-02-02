@@ -1,4 +1,6 @@
-FROM alpine:3.14 as builder
+## NOTE: to retain configuration; mount a Docker volume, or use a bind-mount, on /var/lib/zerotier-one
+
+FROM ubuntu:20.04 as builder
 
 ENV TZ=Asia/Shanghai
 
@@ -6,28 +8,13 @@ WORKDIR /app
 ADD ./entrypoint.sh /app/entrypoint.sh
 ADD ./mkmoonworld-x86_64 /app/mkmoonworld-x86_64
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+## Supports x86_64, x86, arm, and arm64
+# 设置为中国国内源
+RUN set -x;apt-get update && apt-get install -y curl gnupg
+# RUN set -x;apt-key adv --keyserver pgp.mit.edu --recv-keys 0x1657198823e52a61 && \
+#     echo "deb http://download.zerotier.com/debian/buster buster main" > /etc/apt/sources.list.d/zerotier.list
 
-# init tool
-RUN set -x\
-    && apk update\
-    && apk add --no-cache git python3 npm make g++ linux-headers curl pkgconfig openssl-dev  jq build-base  gcc \
-    && echo "env prepare success!"
-
-# make zerotier-one
-RUN set -x\
-    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y\
-    && source "$HOME/.cargo/env"\
-    && git clone https://github.com/zerotier/ZeroTierOne.git\
-    && cd ZeroTierOne\
-    && make ZT_SYMLINK=1 \
-    && make\
-    && make install\
-    && echo "make success!"\
-    ; zerotier-one -d  \
-    ; sleep 5s && ps -ef |grep zerotier-one |grep -v grep |awk '{print $1}' |xargs kill -9\
-    && echo "zerotier-one init success!"
-
+RUN set -x; curl -s https://install.zerotier.com | bash
 
 # #make ztncui
 # RUN set -x \
@@ -39,30 +26,29 @@ RUN set -x\
 #     && npm install -g node-gyp\
 #     && npm install
 
-FROM alpine:3.14
+FROM ubuntu:20.04
 
 WORKDIR /app
 
 ENV IP_ADDR4=''
 ENV IP_ADDR6=''
-
 ENV ZT_PORT=9994
-
 ENV GH_MIRROR="https://ghproxy.markxu.online/"
 ENV FILE_KEY=''
 ENV TZ=Asia/Shanghai
 
 COPY --from=builder /var/lib/zerotier-one /bak/zerotier-one
-COPY --from=builder /app/ZeroTierOne/zerotier-one /usr/sbin/zerotier-one
+COPY --from=builder /usr/sbin/zerotier-cli /usr/sbin/zerotier-cli
+COPY --from=builder /usr/sbin/zerotier-idtool /usr/sbin/zerotier-idtool
+COPY --from=builder /usr/sbin/zerotier-one /usr/sbin/zerotier-one
 COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 COPY --from=builder /app/mkmoonworld-x86_64 /app/mkmoonworld-x86_64
 
-RUN set -x ;sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories \
-    && apk update \
-    && apk add --no-cache npm curl jq openssl\
-    && mkdir /app/config -p
+RUN set -x; apt update && \
+    apt install -y curl jq openssl && \
+    mkdir -p /app/config
 
 
 VOLUME [ "/app/dist","/var/lib/zerotier-one","/app/config"]
 
-CMD ["/bin/sh","/app/entrypoint.sh"]
+CMD ["/bin/bash","/app/entrypoint.sh"]
